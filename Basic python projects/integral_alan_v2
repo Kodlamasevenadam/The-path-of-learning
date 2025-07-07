@@ -1,0 +1,94 @@
+import tkinter as tk
+from tkinter import messagebox
+import sympy as sp
+import numpy as np
+import matplotlib.pyplot as plt
+
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+
+sp.init_printing()
+
+
+class IntegralApp:
+    def __init__(self, master):
+        self.master = master
+        master.title("Belirli İntegral Hesaplama ve Grafik Çizimi")
+
+        # Giriş alanları
+        tk.Label(master, text="Fonksiyon (x, y desteklenir):").grid(
+            row=0, column=0, sticky="w")
+        self.func_entry = tk.Entry(master, width=40)
+        self.func_entry.grid(row=0, column=1)
+
+        tk.Label(master, text="Değişken (x veya y):").grid(
+            row=1, column=0, sticky="w")
+        self.var_entry = tk.Entry(master)
+        self.var_entry.grid(row=1, column=1)
+
+        tk.Label(master, text="Alt Sınır:").grid(row=2, column=0, sticky="w")
+        self.lower_entry = tk.Entry(master)
+        self.lower_entry.grid(row=2, column=1)
+
+        tk.Label(master, text="Üst Sınır:").grid(row=3, column=0, sticky="w")
+        self.upper_entry = tk.Entry(master)
+        self.upper_entry.grid(row=3, column=1)
+
+        # Hesapla butonu
+        self.calc_button = tk.Button(
+            master, text="Hesapla ve Çiz", command=self.calculate)
+        self.calc_button.grid(row=4, column=0, columnspan=2, pady=10)
+
+        # Sonuç alanı
+        self.result_label = tk.Label(
+            master, text="Alan: ", font=("Arial", 12, "bold"))
+        self.result_label.grid(row=5, column=0, columnspan=2)
+
+    def calculate(self):
+        func_str = self.func_entry.get()
+        var_str = self.var_entry.get().strip()
+        lower_str = self.lower_entry.get()
+        upper_str = self.upper_entry.get()
+
+        try:
+            var = sp.Symbol(var_str)
+            func = sp.sympify(func_str)
+            a = float(lower_str)
+            b = float(upper_str)
+
+            # Alan hesaplama
+            alan = sp.integrate(func, (var, a, b))
+            self.result_label.config(text=f"Alan: {alan}")
+
+            # Sayısal çizim için lambdify
+            f_numeric = sp.lambdify(var, func, modules=["numpy"])
+            x_vals = np.linspace(a - 1, b + 1, 400)
+            y_vals = f_numeric(x_vals)
+
+            # Grafik oluştur
+            fig, ax = plt.subplots(figsize=(6, 4))
+            ax.plot(x_vals, y_vals, label=f"f({var}) = {func_str}")
+            ax.fill_between(x_vals, y_vals, where=(x_vals >= a) & (
+                x_vals <= b), color='lightblue', alpha=0.5, label="Alan")
+            ax.axhline(0, color='black', linewidth=0.5)
+            ax.set_title("Fonksiyon Grafiği ve Alan")
+            ax.set_xlabel(str(var))
+            ax.legend()
+            ax.grid(True)
+
+            # Daha önceki canvas'ı kaldır
+            if hasattr(self, 'canvas'):
+                self.canvas.get_tk_widget().destroy()
+
+            # Yeni grafiği yerleştir
+            self.canvas = FigureCanvasTkAgg(fig, master=self.master)
+            self.canvas.draw()
+            self.canvas.get_tk_widget().grid(row=6, column=0, columnspan=2)
+
+        except Exception as e:
+            messagebox.showerror("Hata", f"Hesaplama yapılamadı:\n{e}")
+
+
+# Uygulamayı başlat
+root = tk.Tk()
+app = IntegralApp(root)
+root.mainloop()
